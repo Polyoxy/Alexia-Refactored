@@ -15,6 +15,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.status import Status
 from rich.rule import Rule
+from rich.style import Style
 
 from alexia.core.config import Config
 from alexia.services.ollama_client import OllamaClient
@@ -74,14 +75,15 @@ class ChatSession:
 
     async def run(self):
         """Runs the main interactive chat loop with tool handling and graceful exit."""
-        self.console.print("[bold blue]Starting chat session. '/exit' or '/quit' to end.[/bold blue]")
-        self.console.print(Rule(style="bright_blue"))
+        self.console.print("[bold blue]Starting chat session. Type '/exit', '/quit', or press Ctrl+C to end.[/bold blue]")
+        self.console.print(Rule(style="#666666"))  # Subtle gray separator
+        self.console.print()  # Add extra line for spacing
 
         try:
             while True:
                 user_input = await self._get_user_input()
                 if user_input.lower() in ["/exit", "/quit"]:
-                    self.console.print("[bold blue]->Goodbye![/bold blue]")
+                    self.console.print("[bold blue]Ending session. Goodbye![/bold blue]")
                     break
 
                 self.messages.append({"role": "user", "content": user_input})
@@ -94,7 +96,7 @@ class ChatSession:
                     tool = self.tool_registry.get_tool(tool_name)
 
                     if not tool:
-                        self.console.print(f"[bold red]Error: Alexia requested an unknown tool: '{tool_name}'[/bold red]")
+                        self.console.print(f"[bold red]Error: AI requested an unknown tool: '{tool_name}'[/bold red]")
                         continue
 
                     display_tool_request(self.console, tool_name, arguments)
@@ -126,7 +128,9 @@ class ChatSession:
                     self.console.print(Markdown(llm_response))
                     self.messages.append({"role": "assistant", "content": llm_response})
                 
-                self.console.print(Rule(style="bright_blue"))
+                self.console.print()  # Add extra line for spacing
+                self.console.print(Rule(style="#666666"))  # Subtle gray separator
+                self.console.print()  # Add extra line for spacing
 
         except (KeyboardInterrupt, asyncio.CancelledError):
             self.console.print("\n[bold blue]Session ended. Goodbye![/bold blue]")
