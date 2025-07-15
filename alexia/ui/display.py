@@ -103,7 +103,7 @@ def display_welcome_banner(console: Console, model_name: str):
 
 def display_markdown(console: Console, text: str):
     """Renders and prints a string as markdown."""
-    markdown = Markdown(text, code_theme="monokai", style="default")
+    markdown = Markdown(text, code_theme="dark+", style="default")
     console.print(markdown)
 
 def display_models_table(console: Console, models: List[Dict[str, Any]]):

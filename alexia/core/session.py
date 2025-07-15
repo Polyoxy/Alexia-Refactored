@@ -74,14 +74,14 @@ class ChatSession:
 
     async def run(self):
         """Runs the main interactive chat loop with tool handling and graceful exit."""
-        self.console.print("[bold blue]Starting chat session. Type '/exit', '/quit', or press Ctrl+C to end.[/bold blue]")
+        self.console.print("[bold blue]Starting chat session. '/exit' or '/quit' to end.[/bold blue]")
         self.console.print(Rule(style="bright_blue"))
 
         try:
             while True:
                 user_input = await self._get_user_input()
                 if user_input.lower() in ["/exit", "/quit"]:
-                    self.console.print("[bold blue]Ending session. Goodbye![/bold blue]")
+                    self.console.print("[bold blue]->Goodbye![/bold blue]")
                     break
 
                 self.messages.append({"role": "user", "content": user_input})
@@ -94,7 +94,7 @@ class ChatSession:
                     tool = self.tool_registry.get_tool(tool_name)
 
                     if not tool:
-                        self.console.print(f"[bold red]Error: AI requested an unknown tool: '{tool_name}'[/bold red]")
+                        self.console.print(f"[bold red]Error: Alexia requested an unknown tool: '{tool_name}'[/bold red]")
                         continue
 
                     display_tool_request(self.console, tool_name, arguments)
