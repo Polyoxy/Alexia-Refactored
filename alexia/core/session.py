@@ -20,7 +20,7 @@ from rich.style import Style
 from alexia.core.config import Config
 from alexia.services.ollama_client import OllamaClient
 from alexia.tools.registry import ToolRegistry
-from alexia.tools.file_system import read_file_tool
+from alexia.tools.file_system import read_file_tool, write_file_tool
 from alexia.ui.display import display_tool_request, display_tool_result, prompt_for_confirmation
 
 class ChatSession:
@@ -33,7 +33,7 @@ class ChatSession:
         self.messages: List[Dict[str, str]] = []
         
         # Setup the tool registry
-        self.tool_registry = ToolRegistry(tools=[read_file_tool])
+        self.tool_registry = ToolRegistry(tools=[read_file_tool, write_file_tool])
         self.tool_prompt = self.tool_registry.generate_prompt_string()
         
         # Combine system prompt with tool prompt
