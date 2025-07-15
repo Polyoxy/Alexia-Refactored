@@ -3,6 +3,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Documentation](https://img.shields.io/badge/docs-available-brightgreen.svg)](https://docs.alexia.ai)
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/alexia-ai?label=Sponsor&logo=GitHub)](https://github.com/sponsors/alexia-ai)
+[![Patreon](https://img.shields.io/badge/Patreon-Support-orange.svg)](https://patreon.com/alexia-ai)
+
+Alexia is a sophisticated AI assistant that combines natural language understanding with intelligent tool orchestration. Built for developers and professionals, Alexia delivers a seamless, productive experience through its advanced agentic capabilities and polished terminal interface.
 
 Alexia is a sophisticated AI assistant that combines natural language understanding with intelligent tool orchestration. Built for developers and professionals, Alexia delivers a seamless, productive experience through its advanced agentic capabilities and polished terminal interface.
 
@@ -28,51 +32,24 @@ Alexia is a sophisticated AI assistant that combines natural language understand
 - **Error Handling**: Graceful session management
 - **Documentation**: Comprehensive guides and examples
 
-## 📦 Getting Started
-
-### Requirements
-
-- **Python**: 3.8 or higher
-- **Dependencies**: See [requirements.txt](requirements.txt)
-- **Ollama**: Running locally on default port
-
-### Installation
-
-1. **Clone Repository**
-   ```bash
-   git clone https://github.com/alexia-ai/Alexia.git
-   cd Alexia
-   ```
-
-2. **Set Up Environment**
-   ```bash
-   python -m venv .venv
-   .\.venv\Scripts\activate
-   ```
-
-3. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Run Alexia**
-   ```bash
-   python -m alexia.ui.__main__
-   ```
-
-### Quick Start
+## 🚀 Quick Start
 
 ```bash
-# Start the AI assistant
+# Clone and install
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+
+# Start Alexia
 python -m alexia.ui.__main__
 
-# Type your query
+# Try your first query
 >>> What is the weather like today?
 ```
 
-## 📋 Using Alexia
+## 📋 Getting Started
 
-### Basic Interaction
+### Basic Usage
 
 1. **Start Alexia**
    ```bash
@@ -88,6 +65,18 @@ python -m alexia.ui.__main__
    - Type `/exit` or `/quit`
    - Press Ctrl+C
 
+### Command Line Options
+
+```bash
+python -m alexia.ui.__main__ --help
+```
+
+Available options:
+- `--host`: Specify Ollama host URL
+- `--model`: Set default AI model
+- `--system`: Custom system prompt
+- `-q, --quiet`: Suppress startup messages
+
 ### Intelligent Tools
 
 Alexia features an intelligent tool system that automatically selects the best tools for your tasks:
@@ -97,7 +86,11 @@ Alexia features an intelligent tool system that automatically selects the best t
 - **Web Integration**: Access external resources
 - **Custom Tools**: Extend functionality with your own tools
 
-All tool usage requires user confirmation for security.
+#### Tool Security
+- User confirmation required for all tool usage
+- Secure tool execution environment
+- Comprehensive error handling
+- Regular security audits
 
 ## 🛠️ Project Structure
 
@@ -105,9 +98,15 @@ All tool usage requires user confirmation for security.
 alexia/
 ├── alexia/                # Core Application
 │   ├── core/             # Application Logic
+│   │   ├── session.py    # Chat session management
+│   │   └── config.py     # Configuration handling
 │   ├── services/         # External Integrations
+│   │   └── ollama_client.py # Ollama integration
 │   ├── tools/           # Agentic Tools
+│   │   ├── tool.py      # Base tool class
+│   │   └── registry.py  # Tool registry
 │   └── ui/              # User Interface
+│       └── display.py   # Terminal UI components
 ├── tests/               # Test Suite
 └── docs/               # Documentation
 ```
@@ -127,6 +126,7 @@ alexia/
    - Follow code standards
    - Add comprehensive tests
    - Update documentation
+   - Run pre-commit hooks
 
 4. **Submit Pull Request**
    - Reference relevant issues
@@ -138,6 +138,8 @@ alexia/
 - **Type Hints**: Required for public interfaces
 - **Documentation**: Comprehensive docstrings
 - **Testing**: Minimum 80% coverage
+- **Linting**: Use pre-commit hooks
+- **Branch Naming**: `feature/*`, `bugfix/*`, `hotfix/*`
 
 ## 📄 License & Credits
 
@@ -153,7 +155,16 @@ alexia/
 - **Issues**: Open an issue on GitHub
 - **Contributions**: Welcome pull requests
 - **Community**: Join our Discord
+- **Sponsor**: Support development via GitHub Sponsors or Patreon
+
+### Security
+- **Vulnerabilities**: Report security issues to security@alexia.ai
+- **Updates**: Regular security audits and dependency updates
 
 ---
 
 © 2025 Alexia AI. All rights reserved.
+
+[Follow us on Twitter](https://twitter.com/alexia_ai)
+[Join our Discord](https://discord.alexia.ai)
+[Visit our Website](https://alexia.ai)
