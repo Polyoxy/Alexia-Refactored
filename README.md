@@ -1,114 +1,159 @@
-### # Alexia - Agentic AI CLI
+### # Alexia - Intelligent AI Assistant
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Documentation](https://img.shields.io/badge/docs-available-brightgreen.svg)](https://docs.alexia.ai)
 
-A modern, agentic command-line interface for interacting with Ollama's AI models, featuring tool-driven capabilities and a polished terminal experience.
+Alexia is a sophisticated AI assistant that combines natural language understanding with intelligent tool orchestration. Built for developers and professionals, Alexia delivers a seamless, productive experience through its advanced agentic capabilities and polished terminal interface.
 
-## 🚀 Features
+## 🚀 Key Features
 
-- 🤖 Tool-driven AI interactions with intelligent tool invocation
-- 🎨 Rich terminal UI with markdown support and styled output
-- 🔄 Asynchronous tool execution with progress indicators
-- 🛡️ Secure tool permission system with user confirmation
-- 📚 Modular architecture for easy extension
-- 📄 Built-in file reading capabilities
-- 🔄 Graceful error handling and session management
+### Intelligent AI Interaction
+- **Natural Language Processing**: Advanced understanding of complex queries
+- **Agentic Tool Orchestration**: Smart tool invocation based on context
+- **Secure Tool Management**: User-confirmed tool execution
 
-## 📦 Installation
+### Enhanced Terminal Experience
+- **Rich Markdown Support**: Beautifully formatted output
+- **Interactive UI Elements**: Progress indicators and status updates
+- **Professional Styling**: Clean, modern interface
 
-### Prerequisites
+### Development-Focused
+- **Modular Architecture**: Easy to extend and customize
+- **Built-in Tools**: File system integration and more
+- **Professional Integration**: Designed for developer workflows
 
-- Python 3.8 or higher
-- Ollama running locally (default: http://localhost:11434)
+### Robust Features
+- **Asynchronous Processing**: Smooth tool execution
+- **Error Handling**: Graceful session management
+- **Documentation**: Comprehensive guides and examples
 
-### Quick Setup
+## 📦 Getting Started
 
-```bash
-# Clone the repository
-git clone https://github.com/Polyoxy/Alexia-Refactored.git
-cd Alexia-Refactored
+### Requirements
 
-# Create and activate virtual environment
-python -m venv venv
-.\venv\Scripts\activate
+- **Python**: 3.8 or higher
+- **Dependencies**: See [requirements.txt](requirements.txt)
+- **Ollama**: Running locally on default port
 
-# Install dependencies
-pip install -r requirements.txt
+### Installation
 
-# Run the application
-python -m alexia.ui.__main__
-```
+1. **Clone Repository**
+   ```bash
+   git clone https://github.com/alexia-ai/Alexia.git
+   cd Alexia
+   ```
 
-## 📋 Usage
+2. **Set Up Environment**
+   ```bash
+   python -m venv .venv
+   .\.venv\Scripts\activate
+   ```
 
-### Basic Interaction
+3. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-1. Start the application:
+4. **Run Alexia**
    ```bash
    python -m alexia.ui.__main__
    ```
 
-2. Type your questions or commands:
-   - Use natural language to interact with the AI
-   - The AI will automatically detect when to use tools
+### Quick Start
+
+```bash
+# Start the AI assistant
+python -m alexia.ui.__main__
+
+# Type your query
+>>> What is the weather like today?
+```
+
+## 📋 Using Alexia
+
+### Basic Interaction
+
+1. **Start Alexia**
+   ```bash
+   python -m alexia.ui.__main__
+   ```
+
+2. **Interact with AI**
+   - Type natural language queries
+   - AI automatically uses appropriate tools
    - Confirm tool usage when prompted
 
-3. Exit the application:
+3. **Exit Session**
    - Type `/exit` or `/quit`
    - Press Ctrl+C
 
-### Tool Usage
+### Intelligent Tools
 
-- The AI can automatically invoke tools based on context
-- Tools include:
-  - `read_file`: Read and process local files
-  - More tools coming soon!
-- Tool usage requires user confirmation for security
+Alexia features an intelligent tool system that automatically selects the best tools for your tasks:
 
-## 🛠️ Development
+- **File System**: Read and process local files
+- **Code Analysis**: Understand and work with source code
+- **Web Integration**: Access external resources
+- **Custom Tools**: Extend functionality with your own tools
 
-### Project Structure
+All tool usage requires user confirmation for security.
+
+## 🛠️ Project Structure
 
 ```
 alexia/
-├── alexia/                # Source code
-│   ├── core/             # Core application logic
-│   ├── services/         # External service integrations
-│   ├── tools/           # Agentic tools and registry
-│   └── ui/              # User interface components
-├── tests/               # Test files
+├── alexia/                # Core Application
+│   ├── core/             # Application Logic
+│   ├── services/         # External Integrations
+│   ├── tools/           # Agentic Tools
+│   └── ui/              # User Interface
+├── tests/               # Test Suite
 └── docs/               # Documentation
 ```
 
-### Contributing
+## 🤝 Contributing
 
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+1. **Fork Repository**
+   - Click "Fork" on GitHub
+   - Clone your fork locally
 
-Please make sure to:
-- Follow PEP 8 style guidelines
-- Write tests for new features
-- Update documentation
-- Maintain backward compatibility
+2. **Create Branch**
+   ```bash
+   git checkout -b feature/your-feature
+   ```
 
-## 📄 License
+3. **Make Changes**
+   - Follow code standards
+   - Add comprehensive tests
+   - Update documentation
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+4. **Submit Pull Request**
+   - Reference relevant issues
+   - Include clear descriptions
+   - Add screenshots if applicable
 
-## 🙏 Acknowledgments
+### Code Standards
+- **PEP 8 Compliance**: Strict adherence
+- **Type Hints**: Required for public interfaces
+- **Documentation**: Comprehensive docstrings
+- **Testing**: Minimum 80% coverage
 
-- Built with ❤️ using Python and Rich for terminal UI
-- Special thanks to the Ollama team for their amazing AI platform
-- Inspired by modern CLI tooling and agentic AI systems
+## 📄 License & Credits
 
-## 📱 Contact
+### License
+- **MIT License**: See [LICENSE](LICENSE) for details
 
-For support, questions, or contributions, please open an issue or submit a pull request.
+### Credits
+- **Technology**: Built with Python and Rich
+- **AI Platform**: Powered by Ollama
+- **Inspiration**: Modern CLI design and agentic systems
+
+### Support
+- **Issues**: Open an issue on GitHub
+- **Contributions**: Welcome pull requests
+- **Community**: Join our Discord
 
 ---
 
-Made with ❤️ by the Alexia development team 🚀
+© 2025 Alexia AI. All rights reserved.
