@@ -1,12 +1,10 @@
-### # Alexia - Intelligent AI Assistant
+### # Alexia - Agentic AI Assistant
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Documentation](https://img.shields.io/badge/docs-available-brightgreen.svg)](https://docs.alexia.ai)
-[![GitHub Sponsors](https://img.shields.io/github/sponsors/alexia-ai?label=Sponsor&logo=GitHub)](https://github.com/sponsors/alexia-ai)
-[![Patreon](https://img.shields.io/badge/Patreon-Support-orange.svg)](https://patreon.com/alexia-ai)
-
-Alexia is a sophisticated AI assistant that combines natural language understanding with intelligent tool orchestration. Built for developers and professionals, Alexia delivers a seamless, productive experience through its advanced agentic capabilities and polished terminal interface.
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/AuroraFoundation?label=Sponsor&logo=GitHub)](https://github.com/sponsors/AuroraFoundation)
+[![Patreon](https://img.shields.io/badge/Patreon-Support-orange.svg)](https://patreon.com/your-patreon-username)
 
 Alexia is a sophisticated AI assistant that combines natural language understanding with intelligent tool orchestration. Built for developers and professionals, Alexia delivers a seamless, productive experience through its advanced agentic capabilities and polished terminal interface.
 
