@@ -20,7 +20,7 @@ from rich.style import Style
 from alexia.core.config import Config
 from alexia.services.ollama_client import OllamaClient
 from alexia.tools.registry import ToolRegistry
-from alexia.tools.file_system import read_file_tool, write_file_tool
+from alexia.tools.extended_tools import all_new_tools # Import the new comprehensive tool list
 from alexia.ui.display import display_tool_request, display_tool_result, prompt_for_confirmation
 
 class ChatSession:
@@ -32,8 +32,8 @@ class ChatSession:
         self.console = console
         self.messages: List[Dict[str, str]] = []
         
-        # Setup the tool registry
-        self.tool_registry = ToolRegistry(tools=[read_file_tool, write_file_tool])
+        # Setup the tool registry with the new, extended toolset
+        self.tool_registry = ToolRegistry(tools=all_new_tools)
         self.tool_prompt = self.tool_registry.generate_prompt_string()
         
         # Combine system prompt with tool prompt
@@ -106,11 +106,13 @@ class ChatSession:
 
                     if not confirmed:
                         self.console.print("[bold red]Operation cancelled by user.[/bold red]")
-                        self.messages.pop()
+                        # We remove the user message that triggered the tool call to allow a retry
+                        self.messages.pop() 
                         continue
                     
                     with self.console.status(f"[bold yellow]Executing tool: {tool_name}...[/bold yellow]"):
                         try:
+                            # Run the tool's function in an executor to avoid blocking the event loop
                             tool_result = await loop.run_in_executor(None, lambda: tool.func(**arguments))
                         except Exception as e:
                             self.console.print(f"[bold red]Error executing tool '{tool_name}': {e}[/bold red]")
@@ -118,13 +120,16 @@ class ChatSession:
 
                     display_tool_result(self.console, tool_name, tool_result)
 
+                    # Create a new message for the LLM containing the tool's output, so it can form a final response
                     tool_message = f"Tool '{tool_name}' was executed and returned:\n---\n{tool_result}\n---\nBased on this, please provide the final answer to the user."
                     self.messages.append({"role": "user", "content": tool_message})
 
+                    # Get the final, user-facing response from the LLM
                     final_response = await self._get_llm_response()
                     self.console.print(Markdown(final_response))
                     self.messages.append({"role": "assistant", "content": final_response})
                 else:
+                    # If no tool was requested, just display the response
                     self.console.print(Markdown(llm_response))
                     self.messages.append({"role": "assistant", "content": llm_response})
                 
