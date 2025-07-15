@@ -103,7 +103,7 @@ def display_welcome_banner(console: Console, model_name: str):
 
 def display_markdown(console: Console, text: str):
     """Renders and prints a string as markdown."""
-    markdown = Markdown(text, code_theme="dark+", style="default")
+    markdown = Markdown(text, code_theme="monokai", style="default")
     console.print(markdown)
 
 def display_models_table(console: Console, models: List[Dict[str, Any]]):
@@ -118,6 +118,25 @@ def display_models_table(console: Console, models: List[Dict[str, Any]]):
         modified_at = model.get('modified_at', '').split('T')[0]
         table.add_row(model.get('name'), f"{size_gb:.2f} GB", modified_at)
     
+    console.print(table)
+
+def display_process_table(console: Console, processes: List[Dict[str, Any]]):
+    """Displays a list of running processes in a formatted table."""
+    table = Table(title="Running Processes", border_style="blue")
+    table.add_column("PID", style="dim", justify="right")
+    table.add_column("Process Name", style="cyan")
+    table.add_column("Username", style="yellow")
+    table.add_column("CPU %", style="magenta", justify="right")
+    table.add_column("Mem %", style="green", justify="right")
+
+    for proc in processes:
+        table.add_row(
+            str(proc.get("pid")),
+            proc.get("name"),
+            proc.get("username"),
+            f"{proc.get('cpu_percent', 0):.1f}",
+            f"{proc.get('memory_percent', 0):.1f}"
+        )
     console.print(table)
 
 def display_error(console: Console, message: str):

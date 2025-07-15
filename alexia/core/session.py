@@ -4,24 +4,28 @@ Manages the interactive chat session for Alexia.
 
 This module contains the ChatSession class, which is responsible for the main
 chat loop, handling user input, managing conversation history, and interacting
-with the Ollama API to stream responses.
+with the Ollama API to stream responses. It supports multi-step tool execution.
 """
 
 import asyncio
 import json
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.status import Status
 from rich.rule import Rule
-from rich.style import Style
+from rich.text import Text
 
 from alexia.core.config import Config
 from alexia.services.ollama_client import OllamaClient
 from alexia.tools.registry import ToolRegistry
-from alexia.tools.extended_tools import all_new_tools # Import the new comprehensive tool list
-from alexia.ui.display import display_tool_request, display_tool_result, prompt_for_confirmation
+from alexia.tools.extended_tools import all_new_tools
+from alexia.ui.display import (
+    display_tool_request, 
+    display_tool_result,
+    display_process_table
+)
 
 class ChatSession:
     """Represents and manages a single, tool-aware chat session."""
@@ -32,11 +36,10 @@ class ChatSession:
         self.console = console
         self.messages: List[Dict[str, str]] = []
         
-        # Setup the tool registry with the new, extended toolset
+        # This will now register the updated tool list from extended_tools.py
         self.tool_registry = ToolRegistry(tools=all_new_tools)
         self.tool_prompt = self.tool_registry.generate_prompt_string()
         
-        # Combine system prompt with tool prompt
         self.system_prompt = self.config.system_prompt
         if self.tool_prompt:
             self.system_prompt = f"{self.config.system_prompt}\n\n{self.tool_prompt}"
@@ -47,7 +50,7 @@ class ChatSession:
         return await loop.run_in_executor(None, lambda: self.console.input(prompt))
 
     async def _get_llm_response(self) -> str:
-        """Gets a complete response from the LLM, streaming enabled."""
+        """Gets a complete response from the LLM."""
         full_response = ""
         with self.console.status("[bold yellow]Alexia is thinking...[/bold yellow]"):
             async for chunk in self.client.stream_chat(
@@ -60,13 +63,17 @@ class ChatSession:
         return full_response
 
     def _parse_tool_request(self, response: str) -> Optional[Dict]:
-        """Parses a tool request JSON from the LLM's response."""
+        """
+        Parses a tool request JSON from the LLM's response.
+        This is made more robust to handle responses with or without markdown code blocks.
+        """
         try:
-            # The response might be embedded in markdown, so we extract it
-            if '```json' in response:
-                response = response.split('```json')[1].split('```')[0]
+            json_str = response
+            if '```json' in json_str:
+                json_str = json_str.split('```json')[1].split('```')[0]
             
-            data = json.loads(response.strip())
+            data = json.loads(json_str.strip())
+
             if isinstance(data, dict) and 'tool_name' in data and 'arguments' in data:
                 return data
         except (json.JSONDecodeError, IndexError):
@@ -74,68 +81,92 @@ class ChatSession:
         return None
 
     async def run(self):
-        """Runs the main interactive chat loop with tool handling and graceful exit."""
+        """Runs the main interactive chat loop with multi-step tool handling."""
         self.console.print("[bold blue]Starting chat session. Type '/exit', '/quit', or press Ctrl+C to end.[/bold blue]")
-        self.console.print(Rule(style="#666666"))  # Subtle gray separator
-        self.console.print()  # Add extra line for spacing
+        self.console.print(Rule(style="#666666"))
+        self.console.print()
 
         try:
             while True:
-                user_input = await self._get_user_input()
-                if user_input.lower() in ["/exit", "/quit"]:
+                initial_user_input = await self._get_user_input()
+                if initial_user_input.lower() in ["/exit", "/quit"]:
                     self.console.print("[bold blue]Ending session. Goodbye![/bold blue]")
                     break
 
-                self.messages.append({"role": "user", "content": user_input})
-                llm_response = await self._get_llm_response()
+                self.messages.append({"role": "user", "content": initial_user_input})
+                
+                history_len_before_tools = len(self.messages)
+                
+                while True: 
+                    llm_response = await self._get_llm_response()
+                    tool_request = self._parse_tool_request(llm_response)
 
-                tool_request = self._parse_tool_request(llm_response)
-                if tool_request:
+                    if not tool_request:
+                        self.console.print(Markdown(llm_response, code_theme="monokai"))
+                        self.messages.append({"role": "assistant", "content": llm_response})
+                        break 
+
                     tool_name = tool_request.get('tool_name')
                     arguments = tool_request.get('arguments', {})
                     tool = self.tool_registry.get_tool(tool_name)
 
                     if not tool:
                         self.console.print(f"[bold red]Error: AI requested an unknown tool: '{tool_name}'[/bold red]")
-                        continue
+                        break 
 
                     display_tool_request(self.console, tool_name, arguments)
                     
+                    confirmed = False
                     loop = asyncio.get_event_loop()
-                    confirmed = await loop.run_in_executor(None, lambda: prompt_for_confirmation(self.console))
+                    while True:
+                        prompt = Text.from_markup("[bold yellow]Proceed? (y/n): [/bold yellow]")
+                        response = (await loop.run_in_executor(None, self.console.input, prompt)).lower().strip()
+                        if response == 'y':
+                            confirmed = True
+                            break
+                        if response == 'n':
+                            confirmed = False
+                            break
+                        self.console.print("[red]Invalid input. Please enter 'y' or 'n'.[/red]")
 
                     if not confirmed:
                         self.console.print("[bold red]Operation cancelled by user.[/bold red]")
-                        # We remove the user message that triggered the tool call to allow a retry
-                        self.messages.pop() 
-                        continue
-                    
+                        self.messages = self.messages[:history_len_before_tools]
+                        break 
+
+                    tool_message_content = ""
                     with self.console.status(f"[bold yellow]Executing tool: {tool_name}...[/bold yellow]"):
                         try:
-                            # Run the tool's function in an executor to avoid blocking the event loop
                             tool_result = await loop.run_in_executor(None, lambda: tool.func(**arguments))
                         except Exception as e:
                             self.console.print(f"[bold red]Error executing tool '{tool_name}': {e}[/bold red]")
-                            continue
+                            break
 
-                    display_tool_result(self.console, tool_name, tool_result)
+                    if tool.name == 'list_processes' and isinstance(tool_result, list):
+                        display_process_table(self.console, tool_result)
+                        top_5 = tool_result[:5]
+                        summary = ", ".join([p.get('name', 'N/A') for p in top_5])
+                        tool_message_content = f"Tool '{tool_name}' executed. Displayed a list of {len(tool_result)} processes. The top processes are: {summary}."
+                    else:
+                        display_tool_result(self.console, str(tool_name), str(tool_result))
+                        tool_message_content = f"Tool '{tool_name}' was executed and returned: {tool_result}"
 
-                    # Create a new message for the LLM containing the tool's output, so it can form a final response
-                    tool_message = f"Tool '{tool_name}' was executed and returned:\n---\n{tool_result}\n---\nBased on this, please provide the final answer to the user."
-                    self.messages.append({"role": "user", "content": tool_message})
+                    # --- Final, context-aware follow-up prompt ---
+                    follow_up_prompt = (
+                        f"The user's original request was: '{initial_user_input}'.\n"
+                        f"You just executed the tool '{tool_name}' which returned: '{tool_message_content}'.\n"
+                        "Based on the original request and the output you received, determine the next logical step. "
+                        "If more steps are required, call the next tool using the required JSON format. "
+                        "If the user's request is fully complete, provide a final, natural-language answer."
+                    )
+                    self.messages.append({
+                        "role": "user", 
+                        "content": follow_up_prompt
+                    })
 
-                    # Get the final, user-facing response from the LLM
-                    final_response = await self._get_llm_response()
-                    self.console.print(Markdown(final_response))
-                    self.messages.append({"role": "assistant", "content": final_response})
-                else:
-                    # If no tool was requested, just display the response
-                    self.console.print(Markdown(llm_response))
-                    self.messages.append({"role": "assistant", "content": llm_response})
-                
-                self.console.print()  # Add extra line for spacing
-                self.console.print(Rule(style="#666666"))  # Subtle gray separator
-                self.console.print()  # Add extra line for spacing
+                self.console.print()
+                self.console.print(Rule(style="#666666"))
+                self.console.print()
 
         except (KeyboardInterrupt, asyncio.CancelledError):
             self.console.print("\n[bold blue]Session ended. Goodbye![/bold blue]")
