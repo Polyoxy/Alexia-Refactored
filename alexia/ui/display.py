@@ -43,11 +43,9 @@ def _get_gpu_info() -> str:
     """Attempts to get GPU information from common CLI tools."""
     command = "where" if platform.system() == "Windows" else "which"
     try:
-        # Check for NVIDIA GPU
         if subprocess.run([command, 'nvidia-smi'], capture_output=True, text=True, check=False).returncode == 0:
             result = subprocess.check_output(['nvidia-smi', '--query-gpu=gpu_name', '--format=csv,noheader,nounits'], text=True)
             return result.strip().split('\n')[0]
-        # Check for AMD GPU (simple detection)
         if subprocess.run([command, 'radeontop'], capture_output=True, text=True, check=False).returncode == 0:
             return "AMD GPU (detected)"
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -90,41 +88,25 @@ def display_welcome_banner(console: Console, model_name: str):
 
     max_lines = max(len(art_lines), len(info_lines))
     
-    console.print() # Top margin
+    console.print()
     for i in range(max_lines):
         art_line = art_lines[i] if i < len(art_lines) else ''
         info_line = info_lines[i] if i < len(info_lines) else ''
-        
-        # Create a padded art line to ensure alignment
         padded_art = f"{art_line:<{max_art_width}}"
-        
         console.print(f"[cyan]{padded_art}[/cyan]  {info_line}")
-    console.print() # Bottom margin
+    console.print()
 
 def display_markdown(console: Console, text: str):
     """Renders and prints a string as markdown."""
     markdown = Markdown(text, code_theme="monokai", style="default")
     console.print(markdown)
 
-def display_models_table(console: Console, models: List[Dict[str, Any]]):
-    """Displays a list of models in a formatted table."""
-    table = Table(title="Available Ollama Models", border_style="green")
-    table.add_column("Model Name", style="cyan", no_wrap=True)
-    table.add_column("Size", style="magenta")
-    table.add_column("Modified", style="yellow")
-
-    for model in models:
-        size_gb = model.get('size', 0) / 1024**3
-        modified_at = model.get('modified_at', '').split('T')[0]
-        table.add_row(model.get('name'), f"{size_gb:.2f} GB", modified_at)
-    
-    console.print(table)
-
 def display_process_table(console: Console, processes: List[Dict[str, Any]]):
     """Displays a list of running processes in a formatted table."""
     table = Table(title="Running Processes", border_style="blue")
     table.add_column("PID", style="dim", justify="right")
     table.add_column("Process Name", style="cyan")
+    table.add_column("Managed", style="magenta")
     table.add_column("Username", style="yellow")
     table.add_column("CPU %", style="magenta", justify="right")
     table.add_column("Mem %", style="green", justify="right")
@@ -133,11 +115,24 @@ def display_process_table(console: Console, processes: List[Dict[str, Any]]):
         table.add_row(
             str(proc.get("pid")),
             proc.get("name"),
+            proc.get("managed", "No"),
             proc.get("username"),
             f"{proc.get('cpu_percent', 0):.1f}",
             f"{proc.get('memory_percent', 0):.1f}"
         )
     console.print(table)
+
+def display_plan(console: Console, plan: List[str]):
+    """Displays a formatted execution plan to the user."""
+    plan_text = "\n".join(f"{i+1}. {step}" for i, step in enumerate(plan))
+    console.print(
+        Panel(
+            Text(plan_text, justify="left"),
+            title="[bold blue]Execution Plan[/bold blue]",
+            border_style="blue",
+            expand=False
+        )
+    )
 
 def display_error(console: Console, message: str):
     """Displays a formatted error message."""
@@ -167,12 +162,11 @@ def display_tool_result(console: Console, tool_name: str, result: str):
         )
     )
 
-def prompt_for_confirmation(console: Console, prompt_text: str = "Proceed?") -> bool:
-    """Prompts the user for a 'y/n' confirmation and returns a boolean."""
-    prompt = Text.from_markup(f"[bold yellow]{prompt_text} (y/n): [/bold yellow]")
-    response = console.input(prompt).lower().strip()
-    return response == 'y'
-
 def display_info(console: Console, message: str):
     """Displays a formatted informational message."""
     console.print(f"[bold green]Info:[/bold green] {message}")
+
+def display_cwd_change(console: Console, new_cwd: str):
+    """Displays a notification that the current working directory has changed."""
+    console.print(f"[dim]Working directory changed to [bold cyan]{new_cwd}[/bold cyan][/dim]")
+
