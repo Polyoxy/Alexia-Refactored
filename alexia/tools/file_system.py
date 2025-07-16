@@ -100,3 +100,73 @@ list_directory_tool = Tool(
         }
     ]
 )
+
+def _write_file_func(file_path: str, content: str, mode: str = 'w') -> str:
+    """Writes content to a file with the specified mode.
+    
+    Args:
+        file_path: Path to the file to write to
+        content: Content to write to the file
+        mode: Write mode ('w' for write, 'a' for append, 'x' for exclusive creation)
+        
+    Returns:
+        str: Success message or error message
+    """
+    try:
+        expanded_path = os.path.expanduser(file_path)
+        dir_path = os.path.dirname(expanded_path)
+        
+        # Create parent directories if they don't exist
+        if dir_path and not os.path.exists(dir_path):
+            os.makedirs(dir_path, exist_ok=True)
+            
+        with open(expanded_path, mode, encoding='utf-8') as f:
+            f.write(content)
+            
+        file_size = len(content.encode('utf-8'))
+        size_kb = file_size / 1024.0
+        
+        action = {
+            'w': 'Created and wrote to',
+            'a': 'Appended to',
+            'x': 'Created (exclusive)'
+        }.get(mode, 'Wrote to')
+        
+        return f"{action} '{expanded_path}' ({size_kb:.1f} KB written)"
+        
+    except FileExistsError:
+        return f"Error: File '{expanded_path}' already exists and 'x' mode was used"
+    except PermissionError:
+        return f"Error: Permission denied when trying to write to '{expanded_path}'"
+    except IsADirectoryError:
+        return f"Error: '{expanded_path}' is a directory"
+    except Exception as e:
+        return f"Error: An unexpected error occurred: {e}"
+
+write_file_tool = Tool(
+    name="write_file",
+    description="Writes content to a file. Can create new files, overwrite existing ones, or append to them. Use this when the user asks to create, write, or save content to a file.",
+    func=_write_file_func,
+    args_schema=[
+        {
+            "name": "file_path",
+            "type": "string",
+            "description": "The path to the file to write to",
+            "required": True
+        },
+        {
+            "name": "content",
+            "type": "string",
+            "description": "The content to write to the file",
+            "required": True
+        },
+        {
+            "name": "mode",
+            "type": "string",
+            "description": "Write mode: 'w' to overwrite (default), 'a' to append, 'x' to create exclusively (fails if file exists)",
+            "required": False,
+            "default": "w",
+            "enum": ["w", "a", "x"]
+        }
+    ]
+)

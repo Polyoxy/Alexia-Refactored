@@ -20,7 +20,7 @@ from rich.style import Style
 from alexia.core.config import Config
 from alexia.services.ollama_client import OllamaClient
 from alexia.tools.registry import ToolRegistry
-from alexia.tools.file_system import read_file_tool, list_directory_tool
+from alexia.tools.file_system import read_file_tool, list_directory_tool, write_file_tool
 from alexia.ui.display import display_tool_request, display_tool_result, prompt_for_confirmation
 
 class ChatSession:
@@ -33,7 +33,7 @@ class ChatSession:
         self.messages: List[Dict[str, str]] = []
         
         # Setup the tool registry
-        self.tool_registry = ToolRegistry(tools=[read_file_tool, list_directory_tool])
+        self.tool_registry = ToolRegistry(tools=[read_file_tool, list_directory_tool, write_file_tool])
         self.tool_prompt = self.tool_registry.generate_prompt_string()
         
         # Combine system prompt with tool prompt
@@ -89,7 +89,23 @@ class ChatSession:
                 self.messages.append({"role": "user", "content": user_input})
                 llm_response = await self._get_llm_response()
 
-                tool_request = self._parse_tool_request(llm_response)
+                # Check if the response is a JSON tool request
+                tool_request = None
+                response_text = llm_response.strip()
+                
+                # Try direct JSON parse first
+                if response_text.startswith('{') and 'tool_name' in response_text:
+                    try:
+                        tool_request = json.loads(response_text)
+                    except json.JSONDecodeError:
+                        pass
+                
+                # If that fails, try extracting from markdown code block
+                if not tool_request:
+                    tool_request = self._parse_tool_request(response_text)
+                else:
+                    tool_request = None
+
                 if tool_request:
                     tool_name = tool_request.get('tool_name')
                     arguments = tool_request.get('arguments', {})
@@ -99,14 +115,24 @@ class ChatSession:
                         self.console.print(f"[bold red]Error: AI requested an unknown tool: '{tool_name}'[/bold red]")
                         continue
 
+                    # Show the tool request and get confirmation
                     display_tool_request(self.console, tool_name, arguments)
                     
-                    loop = asyncio.get_event_loop()
-                    confirmed = await loop.run_in_executor(None, lambda: prompt_for_confirmation(self.console))
+                    # Get user confirmation
+                    try:
+                        loop = asyncio.get_event_loop()
+                        confirmed = await loop.run_in_executor(
+                            None, 
+                            lambda: prompt_for_confirmation(self.console, f"Execute {tool_name}?")
+                        )
 
-                    if not confirmed:
-                        self.console.print("[bold red]Operation cancelled by user.[/bold red]")
-                        self.messages.pop()
+                        if not confirmed:
+                            self.console.print("[bold red]Operation cancelled by user.[/bold red]")
+                            self.messages.pop()
+                            continue
+                            
+                    except Exception as e:
+                        self.console.print(f"[bold red]Error getting confirmation: {e}[/bold red]")
                         continue
                     
                     with self.console.status(f"[bold yellow]Executing tool: {tool_name}...[/bold yellow]"):
