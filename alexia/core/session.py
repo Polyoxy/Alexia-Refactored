@@ -85,6 +85,10 @@ class ChatSession:
             "The current working directory has been set to the user's home directory."
         )
 
+    def _get_separator(self, width: int = 60) -> str:
+        """Get a consistent separator line."""
+        return "─" * min(width, 80)  # Cap at 80 characters width
+
     async def _get_user_input(self, prompt: str = "❯") -> str:
         """Gets input from the user asynchronously with a styled prompt."""
         from rich.text import Text
@@ -110,9 +114,6 @@ class ChatSession:
         prompt_text.append(f"{display_path}", style="bold blue")
         prompt_text.append("\n")
         prompt_text.append(f"{prompt} ", style="bold green")
-        
-        # Add a subtle line above the prompt
-        self.console.print("─" * (len(str(display_path)) + len(username) + 5), style="dim")
         
         # Get user input asynchronously
         loop = asyncio.get_event_loop()
@@ -142,6 +143,9 @@ class ChatSession:
             ):
                 token = chunk.get("message", {}).get("content", "")
                 full_response += token
+        # Add a single newline after AI response for better readability
+        if full_response and not full_response.endswith("\n"):
+            full_response += "\n"
         return full_response
 
     def _parse_tool_request(self, response: str) -> Optional[Dict]:
@@ -242,14 +246,14 @@ class ChatSession:
 
     async def run(self):
         """Runs the main interactive chat loop with tool handling and graceful exit."""
-        self.console.print(
-            "[bold blue]Starting chat session. Type '/exit' or '/quit' to end.\n"
-            "[bold]Shell Commands:[/bold] Prefix with '!' to execute directly in shell\n"
-            "  Example: '!ls -la' or '!dir' or '!cd directory'\n"
-            "[bold]AI Commands:[/bold] Type normally to chat with the AI[/bold blue]"
+        welcome_msg = (
+            "[bold blue]Alexia is ready![/bold blue]\n"
+            "[dim]Type your message or use '!' for shell commands (e.g., '!dir')[/dim]"
         )
-        self.console.print(Rule(style="#666666"))  # Subtle gray separator
-        self.console.print()  # Add extra line for spacing
+        
+        # Print welcome message
+        self.console.print(welcome_msg)
+        self.console.print()  # Single newline after welcome
 
         try:
             while True:
