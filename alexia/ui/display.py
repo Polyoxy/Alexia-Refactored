@@ -126,16 +126,24 @@ def display_error(console: Console, message: str):
 
 def display_tool_request(console: Console, tool_name: str, arguments: Dict[str, Any]):
     """Displays a formatted panel for a tool request."""
-    args_text = "\n".join(f"  - {k}: {v}" for k, v in arguments.items())
-    message = Text.from_markup(f"[bold]Tool:[/bold] {tool_name}\n[bold]Arguments:[/bold]\n{args_text}")
-    console.print(
-        Panel(
-            message,
-            title="[bold yellow]Tool Execution Request[/bold yellow]",
-            border_style="yellow",
-            expand=False
-        )
+    # Format arguments for display
+    args_text = "\n".join(f"  - {k}: [bold]{v}[/bold]" for k, v in arguments.items())
+    
+    # Create a more noticeable panel
+    panel = Panel(
+        f"[bold]Tool:[/bold] [cyan]{tool_name}[/cyan]\n\n[bold]Arguments:[/bold]\n{args_text}",
+        title="[bold yellow]🛠️  Tool Execution Request[/bold yellow]",
+        title_align="left",
+        border_style="yellow",
+        style="dim",
+        padding=(1, 2),
+        expand=False
     )
+    
+    # Print some spacing before and after the panel
+    console.print()
+    console.print(panel)
+    console.print()
 
 def display_tool_result(console: Console, tool_name: str, result: str):
     """Displays the result of a tool execution in a formatted panel."""
@@ -150,9 +158,21 @@ def display_tool_result(console: Console, tool_name: str, result: str):
 
 def prompt_for_confirmation(console: Console, prompt_text: str = "Proceed?") -> bool:
     """Prompts the user for a 'y/n' confirmation and returns a boolean."""
-    prompt = Text.from_markup(f"[bold yellow]{prompt_text} (y/n): [/bold yellow]")
-    response = console.input(prompt).lower().strip()
-    return response == 'y'
+    # Create a more noticeable prompt
+    console.print("\n[bold yellow]⚠️  Confirmation Required[/bold yellow]")
+    console.print(f"[bold]{prompt_text}[/bold]")
+    
+    # Keep asking until we get a valid response
+    while True:
+        response = console.input("[bold cyan]›[/bold cyan] [bold]Confirm?[/bold] (y/n): ").lower().strip()
+        if response in ('y', 'yes'):
+            console.print("[green]✓ Confirmed[/green]\n")
+            return True
+        elif response in ('n', 'no'):
+            console.print("[red]✗ Cancelled[/red]\n")
+            return False
+        else:
+            console.print("[yellow]Please enter 'y' for yes or 'n' for no[/yellow]")
 
 def display_info(console: Console, message: str):
     """Displays a formatted informational message."""

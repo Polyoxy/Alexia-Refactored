@@ -21,7 +21,7 @@ from rich.style import Style
 from alexia.core.config import Config
 from alexia.services.ollama_client import OllamaClient
 from alexia.tools.registry import ToolRegistry
-from alexia.tools.file_system import read_file_tool, list_directory_tool, write_file_tool
+from alexia.tools.file_system import read_file_tool, list_directory_tool, write_file_tool, change_directory_tool
 from alexia.ui.display import display_tool_request, display_tool_result, prompt_for_confirmation
 
 class ChatSession:
@@ -60,7 +60,12 @@ class ChatSession:
         }
         
         # Setup the tool registry
-        self.tool_registry = ToolRegistry(tools=[read_file_tool, list_directory_tool, write_file_tool])
+        self.tool_registry = ToolRegistry(tools=[
+            read_file_tool, 
+            list_directory_tool, 
+            write_file_tool,
+            change_directory_tool
+        ])
         self.tool_prompt = self.tool_registry.generate_prompt_string()
         
         # Update system prompt with session context
@@ -151,16 +156,40 @@ class ChatSession:
     def _parse_tool_request(self, response: str) -> Optional[Dict]:
         """Parses a tool request JSON from the LLM's response."""
         try:
-            # The response might be embedded in markdown, so we extract it
-            if '```json' in response:
-                response = response.split('```json')[1].split('```')[0]
+            # Clean up the response first
+            response = response.strip()
+            self.console.print(f"[dim]Debug: Parsing tool request from: {response[:100]}...[/dim]")
             
-            data = json.loads(response.strip())
-            if isinstance(data, dict) and 'tool_name' in data and 'arguments' in data:
-                return data
-        except (json.JSONDecodeError, IndexError):
+            # Try to find JSON in markdown code blocks
+            if '```json' in response:
+                self.console.print("[dim]Debug: Found markdown code block with JSON[/dim]")
+                try:
+                    json_str = response.split('```json')[1].split('```')[0].strip()
+                    data = json.loads(json_str)
+                    if isinstance(data, dict) and 'tool_name' in data:
+                        return data
+                except (json.JSONDecodeError, IndexError) as e:
+                    self.console.print(f"[dim]Debug: Error parsing markdown JSON: {e}[/dim]")
+            
+            # Try to find JSON in the response
+            if '{' in response and '}' in response:
+                self.console.print("[dim]Debug: Trying to find JSON in response[/dim]")
+                try:
+                    # Try to find the first { and last } to get the JSON
+                    json_str = response[response.find('{'):response.rfind('}')+1]
+                    data = json.loads(json_str)
+                    if isinstance(data, dict) and 'tool_name' in data:
+                        return data
+                except json.JSONDecodeError as e:
+                    self.console.print(f"[dim]Debug: Error parsing raw JSON: {e}[/dim]")
+            
+            # If we get here, we couldn't parse a valid tool request
+            self.console.print("[dim]Debug: No valid tool request found in response[/dim]")
             return None
-        return None
+            
+        except Exception as e:
+            self.console.print(f"[dim]Debug: Unexpected error in _parse_tool_request: {e}[/dim]")
+            return None
 
     def _update_current_dir(self, new_dir: str) -> bool:
         """Update the current working directory and session state."""
@@ -297,68 +326,104 @@ class ChatSession:
                 self.messages.append({"role": "user", "content": user_input})
                 llm_response = await self._get_llm_response()
 
-                # Check if the response is a JSON tool request
+                # Check if the response is a tool request
                 tool_request = None
                 response_text = llm_response.strip()
                 
-                # Try direct JSON parse first
+                # Debug: Show the raw response
+                self.console.print(f"[dim]Debug: Raw response: {response_text[:200]}...[/dim]")
+                
+                # Try to parse as direct JSON first
                 if response_text.startswith('{') and 'tool_name' in response_text:
                     try:
                         tool_request = json.loads(response_text)
-                    except json.JSONDecodeError:
-                        pass
+                        self.console.print("[dim]Debug: Successfully parsed direct JSON tool request[/dim]")
+                    except json.JSONDecodeError as e:
+                        self.console.print(f"[dim]Debug: JSON decode error: {e}[/dim]")
                 
                 # If that fails, try extracting from markdown code block
                 if not tool_request:
+                    self.console.print("[dim]Debug: Trying to parse as markdown code block[/dim]")
                     tool_request = self._parse_tool_request(response_text)
-                else:
-                    tool_request = None
-
+                
+                # If we have a tool request, execute it
                 if tool_request:
                     tool_name = tool_request.get('tool_name')
                     arguments = tool_request.get('arguments', {})
+                    
+                    self.console.print(f"[dim]Debug: Found tool request - Name: {tool_name}, Args: {arguments}[/dim]")
+                    
                     tool = self.tool_registry.get_tool(tool_name)
-
                     if not tool:
-                        self.console.print(f"[bold red]Error: AI requested an unknown tool: '{tool_name}'[/bold red]")
-                        continue
-
-                    # Show the tool request and get confirmation
-                    display_tool_request(self.console, tool_name, arguments)
-                    
-                    # Get user confirmation
-                    try:
-                        loop = asyncio.get_event_loop()
-                        confirmed = await loop.run_in_executor(
-                            None, 
-                            lambda: prompt_for_confirmation(self.console, f"Execute {tool_name}?")
-                        )
-
-                        if not confirmed:
-                            self.console.print("[bold red]Operation cancelled by user.[/bold red]")
-                            self.messages.pop()
-                            continue
-                            
-                    except Exception as e:
-                        self.console.print(f"[bold red]Error getting confirmation: {e}[/bold red]")
+                        self.console.print(f"[bold red]Error: Unknown tool requested: '{tool_name}'[/bold red]")
                         continue
                     
-                    with self.console.status(f"[bold yellow]Executing tool: {tool_name}...[/bold yellow]"):
+                    # Special handling for change_directory to ensure proper path resolution
+                    if tool_name == "change_directory":
+                        new_dir = arguments.get('directory_path', '')
+                        if not new_dir:
+                            new_dir = os.path.expanduser("~")
+                        
+                        # Show the tool request
+                        display_tool_request(self.console, tool_name, {"directory_path": new_dir})
+                        
+                        # Get user confirmation
                         try:
-                            tool_result = await loop.run_in_executor(None, lambda: tool.func(**arguments))
+                            confirmed = prompt_for_confirmation(
+                                self.console, 
+                                f"Change directory to: {new_dir}"
+                            )
+                            
+                            if not confirmed:
+                                self.console.print("[bold yellow]Directory change cancelled.[/bold yellow]")
+                                continue
+                                
+                            # Execute the directory change
+                            if self._update_current_dir(new_dir):
+                                self.console.print(f"[green]✓ Changed directory to: {self.current_dir}[/green]")
+                            else:
+                                self.console.print(f"[red]Failed to change directory to: {new_dir}[/red]")
+                                
                         except Exception as e:
-                            self.console.print(f"[bold red]Error executing tool '{tool_name}': {e}[/bold red]")
+                            self.console.print(f"[red]Error changing directory: {e}[/red]")
+                            
+                    else:
+                        # For all other tools, use the standard flow
+                        display_tool_request(self.console, tool_name, arguments)
+                        
+                        try:
+                            confirmed = prompt_for_confirmation(
+                                self.console, 
+                                f"Execute tool: {tool_name}"
+                            )
+                            
+                            if not confirmed:
+                                self.console.print("[bold yellow]Operation cancelled.[/yellow]")
+                                continue
+                                
+                            # Execute the tool
+                            with self.console.status(f"[bold yellow]Executing {tool_name}...[/yellow]"):
+                                tool_result = tool.func(**arguments)
+                                display_tool_result(self.console, tool_name, tool_result)
+                                
+                                # Add tool result to messages for context
+                                tool_message = (
+                                    f"Tool '{tool_name}' was executed and returned:\n---\n"
+                                    f"{tool_result}\n---\n"
+                                    "Based on this, please provide the final answer to the user."
+                                )
+                                self.messages.append({"role": "user", "content": tool_message})
+                                
+                                # Get final response from LLM
+                                final_response = await self._get_llm_response()
+                                self.console.print(Markdown(final_response))
+                                self.messages.append({"role": "assistant", "content": final_response})
+                                
+                        except Exception as e:
+                            self.console.print(f"[red]Error executing '{tool_name}': {e}[/red]")
                             continue
-
-                    display_tool_result(self.console, tool_name, tool_result)
-
-                    tool_message = f"Tool '{tool_name}' was executed and returned:\n---\n{tool_result}\n---\nBased on this, please provide the final answer to the user."
-                    self.messages.append({"role": "user", "content": tool_message})
-
-                    final_response = await self._get_llm_response()
-                    self.console.print(Markdown(final_response))
-                    self.messages.append({"role": "assistant", "content": final_response})
                 else:
+                    # No tool request, just display the response
                     self.console.print(Markdown(llm_response))
                     self.messages.append({"role": "assistant", "content": llm_response})
                 

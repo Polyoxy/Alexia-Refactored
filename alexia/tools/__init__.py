@@ -5,7 +5,7 @@ Exports the tools for use in the application.
 
 from .tool import Tool
 from .registry import ToolRegistry
-from .file_system import read_file_tool, list_directory_tool, write_file_tool
+from .file_system import read_file_tool, list_directory_tool, write_file_tool, change_directory_tool
 
 # Export all tools for easy importing
 __all__ = [
@@ -13,5 +13,6 @@ __all__ = [
     'ToolRegistry',
     'read_file_tool',
     'list_directory_tool',
-    'write_file_tool'
+    'write_file_tool',
+    'change_directory_tool'
 ]

@@ -143,6 +143,83 @@ def _write_file_func(file_path: str, content: str, mode: str = 'w') -> str:
     except Exception as e:
         return f"Error: An unexpected error occurred: {e}"
 
+def _change_directory_func(directory_path: str) -> str:
+    """Changes the current working directory.
+    
+    Args:
+        directory_path: Path to the directory to change to. Can be absolute or relative.
+                       Also handles natural language commands like 'go into [dirname]' or 'navigate to [path]'.
+        
+    Returns:
+        str: Success message with new directory path or error message
+    """
+    try:
+        # Handle natural language commands
+        if 'go into' in directory_path.lower():
+            directory_path = directory_path.lower().split('go into')[-1].strip()
+        elif 'navigate to' in directory_path.lower():
+            directory_path = directory_path.lower().split('navigate to')[-1].strip()
+        elif 'cd ' in directory_path.lower():
+            directory_path = directory_path.lower().split('cd ')[-1].strip()
+            
+        # Handle special directories
+        if directory_path.lower() in ['~', 'home']:
+            directory_path = os.path.expanduser("~")
+        elif directory_path in ['.']:
+            return "Already in the current directory."
+        elif directory_path in ['..', 'parent', 'up']:
+            directory_path = os.path.dirname(os.getcwd())
+        
+        # Expand user directory and get absolute path
+        expanded_path = os.path.abspath(os.path.expanduser(directory_path))
+        current_dir = os.getcwd()
+        
+        # Check if the path is relative to current directory
+        if not os.path.isabs(directory_path):
+            # Try to find the directory in the current directory
+            for item in os.listdir(current_dir):
+                if item.lower() == directory_path.lower() and os.path.isdir(os.path.join(current_dir, item)):
+                    expanded_path = os.path.join(current_dir, item)
+                    break
+        
+        # Check if path exists and is a directory
+        if not os.path.exists(expanded_path):
+            # Try to find a matching directory name in the current directory
+            matching_dirs = [d for d in os.listdir(current_dir) 
+                           if directory_path.lower() in d.lower() 
+                           and os.path.isdir(os.path.join(current_dir, d))]
+            
+            if matching_dirs:
+                if len(matching_dirs) == 1:
+                    expanded_path = os.path.join(current_dir, matching_dirs[0])
+                else:
+                    return f"Multiple matching directories found: {', '.join(matching_dirs)}"
+            else:
+                return f"Error: Directory not found: '{directory_path}'"
+            
+        if not os.path.isdir(expanded_path):
+            return f"Error: Not a directory: '{expanded_path}'"
+            
+        # Change the directory
+        os.chdir(expanded_path)
+        return f"Successfully changed directory to: {expanded_path}"
+        
+    except Exception as e:
+        return f"Error changing directory: {str(e)}"
+
+change_directory_tool = Tool(
+    name="change_directory",
+    description="Changes the current working directory. Use this when you need to navigate to a different directory. The path can be absolute or relative to the current directory.",
+    func=_change_directory_func,
+    args_schema=[
+        {
+            "name": "directory_path",
+            "type": "string",
+            "description": "The path to the directory to change to. Can be absolute or relative to the current directory."
+        }
+    ]
+)
+
 write_file_tool = Tool(
     name="write_file",
     description="Writes content to a file. Can create new files, overwrite existing ones, or append to them. Use this when the user asks to create, write, or save content to a file.",
