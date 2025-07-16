@@ -1,4 +1,4 @@
-### # Alexia - Agentic AI Assistant
+# Alexia - Agentic AI Assistant
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -8,22 +8,32 @@
 
 Alexia is a sophisticated AI assistant that combines natural language understanding with intelligent tool orchestration. Built for developers and professionals, Alexia delivers a seamless, productive experience through its advanced agentic capabilities and polished terminal interface.
 
+🔍 **Now with enhanced directory navigation and tool execution!**
+
 ## 🚀 Key Features
 
 ### Intelligent AI Interaction
 - **Natural Language Processing**: Advanced understanding of complex queries
 - **Agentic Tool Orchestration**: Smart tool invocation based on context
 - **Secure Tool Management**: User-confirmed tool execution
+- **Natural Directory Navigation**: Intuitive path handling with commands like "go to my documents"
 
 ### Enhanced Terminal Experience
 - **Rich Markdown Support**: Beautifully formatted output
 - **Interactive UI Elements**: Progress indicators and status updates
 - **Professional Styling**: Clean, modern interface
+- **Clear Tool Execution**: Visual feedback for all operations
+
+### Smart File System Integration
+- **Natural Language Path Resolution**: Understands paths like "desktop" or "downloads"
+- **Context-Aware Navigation**: Maintains directory context across commands
+- **Safe Operations**: Confirmation prompts for all file system changes
 
 ### Development-Focused
 - **Modular Architecture**: Easy to extend and customize
 - **Built-in Tools**: File system integration and more
 - **Professional Integration**: Designed for developer workflows
+- **Debugging Support**: Built-in logging and inspection tools
 
 ### Robust Features
 - **Asynchronous Processing**: Smooth tool execution
@@ -41,8 +51,11 @@ pip install -r requirements.txt
 # Start Alexia
 python -m alexia.ui.__main__
 
-# Try your first query
->>> What is the weather like today?
+# Try these examples:
+>>> list files in this directory
+>>> go to my documents
+>>> show me what's on my desktop
+>>> create a new file called hello.txt
 ```
 
 ## 📋 Getting Started
@@ -79,16 +92,49 @@ Available options:
 
 Alexia features an intelligent tool system that automatically selects the best tools for your tasks:
 
-- **File System**: Read and process local files
+- **File System**: Navigate and manage files with natural language
+  ```
+  list files in this directory
+  go to my documents
+  show me what's on my desktop
+  create a new file called hello.txt
+  ```
 - **Code Analysis**: Understand and work with source code
 - **Web Integration**: Access external resources
 - **Custom Tools**: Extend functionality with your own tools
 
-#### Tool Security
-- User confirmation required for all tool usage
-- Secure tool execution environment
-- Comprehensive error handling
-- Regular security audits
+### Natural Language Directory Navigation
+
+Alexia understands various ways to navigate your file system:
+- **Basic Navigation**: "go to documents", "navigate to downloads"
+- **Relative Paths**: "go up one level", "go to parent directory"
+- **Home Shortcuts**: "go home", "take me to root"
+- **Smart Suggestions**: Auto-completes partial directory names
+
+Example commands:
+```
+go to my documents
+navigate to desktop
+list files in downloads
+what's in this folder?
+```
+
+#### Tool Security & Confirmation
+
+Alexia ensures safe and transparent operations:
+
+- **Explicit Confirmation**: Every tool execution requires explicit user approval
+- **Clear Prompts**: Understandable descriptions of requested actions
+- **Visual Feedback**: Clear success/error messages for all operations
+- **Session Persistence**: Maintains directory context across commands
+- **Safe Execution**: Runs tools in a controlled environment
+
+Example confirmation prompt:
+```
+⚠️  Confirmation Required
+Change directory to: C:\Users\username\Documents
+› Confirm? (y/n): 
+```
 
 ## 🛠️ Project Structure
 

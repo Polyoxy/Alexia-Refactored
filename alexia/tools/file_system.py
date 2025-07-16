@@ -56,24 +56,37 @@ def _list_directory_func(directory_path: str, show_hidden: bool = False) -> str:
                 continue
                 
             if entry.is_dir():
-                entry_type = "[DIR]"
+                entry_type = "DIR"
                 entry_size = ""
             else:
-                entry_type = "[FILE]"
+                entry_type = "FILE"
                 entry_size = f"{entry.stat().st_size / 1024:.1f} KB"
                 
-            entries.append(f"{entry_type} {entry.name:<40} {entry_size}")
+            entries.append({
+                'name': entry.name,
+                'type': entry_type,
+                'size': entry_size
+            })
             
         if not entries:
             return "No files found" if not show_hidden else "Directory is empty"
             
         # Sort directories first, then files, then by name
-        entries.sort(key=lambda x: (not x.startswith('[DIR]'), x.lower()))
+        entries.sort(key=lambda x: (x['type'] != 'DIR', x['name'].lower()))
         
-        # Add header
-        result = [f"Contents of {expanded_path}:", "-" * 60]
-        result.extend(entries)
-        result.append(f"\n{len(entries)} items" + (" (hidden files shown)" if show_hidden else ""))
+        # Format the output
+        max_name_len = max((len(entry['name']) for entry in entries), default=0)
+        max_name_len = min(max_name_len, 40)  # Cap at 40 characters
+        
+        result = [f"Contents of {expanded_path}:", "=" * 60]
+        for entry in entries:
+            entry_line = f"{entry['type']:<4} {entry['name']:<{max_name_len + 2}}"
+            if entry['size']:
+                entry_line += f"  {entry['size']:>10}"
+            result.append(entry_line)
+            
+        result.append("")
+        result.append(f"{len(entries)} items" + (" (hidden files shown)" if show_hidden else ""))
         
         return "\n".join(result)
         

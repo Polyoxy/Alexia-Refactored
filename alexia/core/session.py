@@ -303,22 +303,38 @@ class ChatSession:
                     if not command:
                         continue
                         
-                    # Special handling for cd command to maintain directory state
+                    # Handle cd command to maintain directory state
                     if command.startswith('cd '):
                         try:
                             new_dir = command[3:].strip()
                             if not new_dir:
                                 # If just 'cd', go to home directory
                                 new_dir = os.path.expanduser("~")
-                            os.chdir(new_dir)
-                            self.console.print(f"[green]Changed directory to: {os.getcwd()}[/green]")
+                            
+                            # Update directory using our method to maintain state
+                            if self._update_current_dir(new_dir):
+                                self.console.print(f"[green]Changed directory to: {self.current_dir}[/green]")
+                            else:
+                                self.console.print(f"[red]Directory not found: {new_dir}[/red]")
                         except Exception as e:
-                            self.console.print(f"[red]Error changing directory: {e}[/red]")
+                            error_msg = f"Error changing directory: {str(e)}"
+                            self.console.print(Text(error_msg, style="red"))
                         continue
                         
                     # Execute other commands in shell
                     self.console.print(f"[dim]Executing: {command}[/dim]")
                     output = await self._execute_shell_command(command)
+                    
+                    # After any shell command, update our current directory to match the shell
+                    try:
+                        new_dir = os.getcwd()
+                        if new_dir != self.current_dir:
+                            self.current_dir = new_dir
+                            self.session_memory['current_dir'] = new_dir
+                            self._update_system_prompt()
+                    except Exception as e:
+                        self.console.print(f"[yellow]Warning: Could not update directory state: {str(e).replace('[', '[').replace(']', ']')}[/yellow]")
+                    
                     self.console.print(output)
                     self.console.print()  # Add extra line for spacing
                     continue
@@ -382,45 +398,52 @@ class ChatSession:
                             if self._update_current_dir(new_dir):
                                 self.console.print(f"[green]✓ Changed directory to: {self.current_dir}[/green]")
                             else:
-                                self.console.print(f"[red]Failed to change directory to: {new_dir}[/red]")
+                                error_msg = f"Failed to change directory to: {str(new_dir)}"
+                                self.console.print(Text(error_msg, style="red"))
                                 
                         except Exception as e:
-                            self.console.print(f"[red]Error changing directory: {e}[/red]")
+                            error_msg = f"Error changing directory: {str(e)}"
+                            self.console.print(Text(error_msg, style="red"))
                             
                     else:
                         # For all other tools, use the standard flow
                         display_tool_request(self.console, tool_name, arguments)
                         
-                        try:
-                            confirmed = prompt_for_confirmation(
-                                self.console, 
-                                f"Execute tool: {tool_name}"
-                            )
+                        # Get confirmation before executing the tool
+                        confirmed = prompt_for_confirmation(
+                            self.console, 
+                            f"Execute tool: {tool_name}"
+                        )
+                        
+                        if not confirmed:
+                            self.console.print("[bold yellow]Operation cancelled.[/bold yellow]")
+                            continue
                             
-                            if not confirmed:
-                                self.console.print("[bold yellow]Operation cancelled.[/yellow]")
-                                continue
-                                
-                            # Execute the tool
-                            with self.console.status(f"[bold yellow]Executing {tool_name}...[/yellow]"):
+                        # Execute the tool
+                        try:
+                            with self.console.status(f"[bold yellow]Executing {tool_name}...[/bold yellow]"):
                                 tool_result = tool.func(**arguments)
-                                display_tool_result(self.console, tool_name, tool_result)
-                                
-                                # Add tool result to messages for context
-                                tool_message = (
-                                    f"Tool '{tool_name}' was executed and returned:\n---\n"
-                                    f"{tool_result}\n---\n"
-                                    "Based on this, please provide the final answer to the user."
-                                )
-                                self.messages.append({"role": "user", "content": tool_message})
-                                
-                                # Get final response from LLM
-                                final_response = await self._get_llm_response()
-                                self.console.print(Markdown(final_response))
-                                self.messages.append({"role": "assistant", "content": final_response})
-                                
+                            
+                            # Display the result after the status is done
+                            display_tool_result(self.console, tool_name, tool_result)
+                            
+                            # Add tool result to messages for context
+                            tool_message = (
+                                f"Tool '{tool_name}' was executed and returned:\n---\n"
+                                f"{tool_result}\n---\n"
+                                "Based on this, please provide the final answer to the user."
+                            )
+                            self.messages.append({"role": "user", "content": tool_message})
+                            
+                            # Get final response from LLM
+                            final_response = await self._get_llm_response()
+                            self.console.print(Markdown(final_response))
+                            self.messages.append({"role": "assistant", "content": final_response})
+                            
                         except Exception as e:
-                            self.console.print(f"[red]Error executing '{tool_name}': {e}[/red]")
+                            from rich.text import Text
+                            error_msg = f"Error executing '{tool_name}': {str(e)}"
+                            self.console.print(Text(error_msg, style="red"))
                             continue
                 else:
                     # No tool request, just display the response
