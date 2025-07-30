@@ -74,20 +74,32 @@ class ChatSession:
     def _update_system_prompt(self):
         """Update the system prompt with current session context."""
         context = (
-            f"System Information:\n"
+            f"## System Information\n"
             f"- OS: {self.os_info['system']} {self.os_info['release']}\n"
             f"- Current Directory: {self.current_dir}\n"
             f"- Python: {self.os_info['python_version']}\n"
-            "\nYou have access to the following tools:"
+        )
+        
+        tool_instructions = (
+            "## Tool Usage Instructions\n"
+            "1. Use `list_directory` to explore the filesystem and see what's in a directory\n"
+            "2. Use `read_file` to view the contents of a file (e.g., README.md)\n"
+            "3. Use `change_directory` only when explicitly asked to navigate to a different directory\n\n"
+            "When using tools, respond with a JSON object containing 'tool_name' and 'arguments'.\n"
+            "Example for reading a file:\n"
+            '```json\n{"tool_name": "read_file", "arguments": {"file_path": "README.md"}}\n```\n\n'
         )
         
         self.system_prompt = (
             f"{self.config.system_prompt}\n\n"
-            f"{context}\n\n"
-            f"{self.tool_prompt}\n\n"
-            "Remember the current directory and OS context when performing operations. "
-            "Always use absolute paths or paths relative to the current directory.\n"
-            "The current working directory has been set to the user's home directory."
+            f"{context}\n"
+            f"{tool_instructions}\n"
+            "## Important Notes\n"
+            "- Always check the current directory before performing file operations\n"
+            "- Use relative paths for files in the current directory (e.g., 'README.md' instead of full paths)\n"
+            "- Only use `change_directory` when explicitly asked to navigate to a different directory\n"
+            "- When in doubt, use `list_directory` to explore the filesystem first\n\n"
+            f"{self.tool_prompt}\n"
         )
 
     def _get_separator(self, width: int = 60) -> str:
@@ -154,7 +166,13 @@ class ChatSession:
         return full_response
 
     def _parse_tool_request(self, response: str) -> Optional[Dict]:
-        """Parses a tool request JSON from the LLM's response."""
+        """Parses a tool request from the LLM's response.
+        
+        Supports multiple formats:
+        1. JSON with tool_name and arguments
+        2. Python-style function calls in markdown code blocks
+        3. Raw Python-style function calls
+        """
         try:
             # Clean up the response first
             response = response.strip()
@@ -182,6 +200,39 @@ class ChatSession:
                         return data
                 except json.JSONDecodeError as e:
                     self.console.print(f"[dim]Debug: Error parsing raw JSON: {e}[/dim]")
+            
+            # Try to parse Python-style function calls
+            if '(' in response and ')' in response:
+                self.console.print("[dim]Debug: Trying to parse as Python-style function call[/dim]")
+                try:
+                    # Extract function name and arguments
+                    func_call = response.split('(', 1)
+                    if len(func_call) == 2:
+                        func_name = func_call[0].strip()
+                        args_str = func_call[1].rsplit(')', 1)[0].strip()
+                        
+                        # Parse keyword arguments
+                        args_dict = {}
+                        if '=' in args_str:
+                            for arg in args_str.split(','):
+                                arg = arg.strip()
+                                if '=' in arg:
+                                    key, value = arg.split('=', 1)
+                                    key = key.strip()
+                                    value = value.strip().strip("'\"")
+                                    args_dict[key] = value
+                        else:
+                            # Handle positional arguments (assuming first argument is file_path for read_file)
+                            if func_name == 'read_file':
+                                args_dict['file_path'] = args_str.strip("'\"")
+                        
+                        if func_name and args_dict:
+                            return {
+                                'tool_name': func_name,
+                                'arguments': args_dict
+                            }
+                except Exception as e:
+                    self.console.print(f"[dim]Debug: Error parsing Python-style function call: {e}[/dim]")
             
             # If we get here, we couldn't parse a valid tool request
             self.console.print("[dim]Debug: No valid tool request found in response[/dim]")
